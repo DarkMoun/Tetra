@@ -280,9 +280,9 @@ public class Shape
     {
         foreach(Cube c in cubes)
         {
-            if (!c.cell)
-                return false;
-            else if (!c.cell.free && c.cell.cube.shape != this && c.cell.cube.shape.shadowOf != this)
+            if (!c.cell ||
+                (!c.cell.free && c.cell.cube.shape != this && c.cell.cube.shape.shadowOf != this) ||
+                (c.cell.OwnerID != 0 && c.cell.OwnerID != Controller.instance.playerID))
                 return false;
         }
         return true;

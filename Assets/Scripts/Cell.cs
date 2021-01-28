@@ -11,7 +11,69 @@ public class Cell : MonoBehaviour
     [HideInInspector]
     public Cube unvalidatedCube = null;
 
+    private int ownerID = 0;
+    private bool isTarget = false;
+    private bool isNeutral = false;
+    public GameObject targetDisplayer;
+    public List<Renderer> renderers;
+
     private Color initialColor;
+
+    public int OwnerID { 
+        get => ownerID; 
+        set {
+            ownerID = value;
+            if(!isNeutral && ownerID < 3)
+            {
+                // change cell color to owner color
+                Color c = Controller.instance.playersColors[ownerID - 1];
+                initialColor = new Color(c.r, c.g, c.b, 0.3f);
+                SetColor(initialColor);
+            }
+        } 
+    }
+
+    public bool IsTarget { 
+        get => isTarget;
+        set
+        {
+            isTarget = value;
+            if (!isNeutral)
+            {
+                // change transparancy depending on value
+                initialColor = new Color(initialColor.r, initialColor.g, initialColor.b, isTarget ? 0.8f : 0.3f);
+                SetColor(initialColor);
+            }
+        }
+    }
+
+    public bool IsNeutral { 
+        get => isNeutral;
+        set
+        {
+            isNeutral = value;
+            // change color to grey if true
+            if (isNeutral)
+            {
+                initialColor = new Color(Color.grey.r, Color.grey.g, Color.grey.b, 0.3f);
+                SetColor(initialColor);
+            }
+        }
+    }
+
+    private void OnMouseEnter()
+    {
+        Controller.instance.mouseOverCell = this;
+        Controller.instance.mouseOverCube = null;
+        SetColor(Color.yellow);
+    }
+
+    private void OnMouseExit()
+    {
+        SetColor(initialColor);
+        if (Controller.instance.mouseOverCell == this)
+            Controller.instance.mouseOverCell = null;
+    }
 
     // Start is called before the first frame update
     void Start()
@@ -30,21 +92,11 @@ public class Cell : MonoBehaviour
         
     }
 
-    private void OnMouseEnter()
+    private void SetColor(Color c)
     {
-        Controller.instance.mouseOverCell = this;
-        Controller.instance.mouseOverCube = null;
-        foreach (Transform child in transform)
-            if (child.GetComponent<Renderer>())
-                child.GetComponent<Renderer>().material.color = Color.yellow;
-    }
-
-    private void OnMouseExit()
-    {
-        foreach (Transform child in transform)
-            if (child.GetComponent<Renderer>())
-                child.GetComponent<Renderer>().material.color = initialColor;
-        if (Controller.instance.mouseOverCell == this)
-            Controller.instance.mouseOverCell = null;
+        if (renderers == null)
+            renderers = new List<Renderer>();
+        foreach (Renderer r in renderers)
+            r.material.color = c;
     }
 }

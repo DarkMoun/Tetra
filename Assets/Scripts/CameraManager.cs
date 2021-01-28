@@ -11,6 +11,9 @@ public class CameraManager : MonoBehaviour
     public float minZoom = 5;
     public float maxZoom = 20;
 
+    private float minRotation = 0;
+    private float maxRotation = 89;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -43,9 +46,17 @@ public class CameraManager : MonoBehaviour
     {
         if (Input.GetMouseButton(1))
         {
-            transform.LookAt(posTarget);
+            // Rotate around posTarget
             transform.RotateAround(posTarget, Vector3.up, Input.GetAxis("Mouse X") * 5);
-            transform.RotateAround(posTarget, Vector3.right, Input.GetAxis("Mouse Y") * 5);
+            float yAngle = Vector3.Angle(transform.position - posTarget, new Vector3(transform.position.x, 0, transform.position.z) - posTarget);
+            float newAngle = yAngle + Input.GetAxis("Mouse Y") * 5;
+            if (newAngle > maxRotation)
+                newAngle = maxRotation - yAngle;
+            else if (newAngle < minRotation)
+                newAngle = minRotation - yAngle;
+            else
+                newAngle = Input.GetAxis("Mouse Y") * 5;
+            transform.RotateAround(posTarget, transform.right, newAngle);
         }
 
         float cameraDist = (transform.position - posTarget).magnitude;

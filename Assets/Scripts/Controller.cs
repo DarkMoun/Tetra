@@ -35,8 +35,12 @@ public class Controller : MonoBehaviour
     private Cell previewCell = null;
     private Shape previewShape = null;
 
+    public int playerID = 1;
+
     [SerializeField]
     private int movingRange = 1;
+
+    public List<Color> playersColors;
 
     private Cube tmpCube;
     private Shape tmpShape;
@@ -54,6 +58,13 @@ public class Controller : MonoBehaviour
                 instance = this;
             else
                 enabled = false;
+
+            if (playersColors == null)
+            {
+                playersColors = new List<Color>();
+                playersColors.Add(Color.blue);
+                playersColors.Add(Color.red);
+            }
         }
     }
 
@@ -127,14 +138,14 @@ public class Controller : MonoBehaviour
             {
                 mouseDownCell = null;
                 //action for a click on mouseOverCell
-                if (mouseOverCell.free)
+                if (mouseOverCell.free && (mouseOverCell.OwnerID == playerID || mouseOverCell.OwnerID == 0))
                 {
                     selectedShape = previewShape;
                     selectedShape.MoveTemporarily(mouseOverCell);
                     selectedShape.Select();
                     selectedShape.previewShape = false;
                 }
-                else
+                else if (!mouseOverCell.free)
                 {
                     selectedShape = mouseOverCell.cube.shape;
                     mouseOverCell.cube.shape.Select();
