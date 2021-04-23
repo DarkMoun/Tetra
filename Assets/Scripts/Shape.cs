@@ -26,6 +26,10 @@ public class Shape
     private Color color;
     private Cell cell;
     public bool previewShape = true;
+    private int ownerID = 0;
+
+    private Controller owner;
+    private bool ownerIsPlayer;
 
     public Shape shadowOf = null;
 
@@ -38,7 +42,10 @@ public class Shape
             type = value;
             coords.Clear();
             coords.AddRange(Shape.typesCoords[type]);
-            Controller.instance.AllocateCubes(this);
+            if (EventHandler.instance.Players.ContainsKey(ownerID))
+                EventHandler.instance.Players[ownerID].AllocateCubes(this);
+            else
+                ControllerPlayer.instance.AllocateCubes(this);
         } 
     }
 
@@ -62,23 +69,23 @@ public class Shape
         }
     }
 
-    #region Constructors
-    public Shape(Cell c)
-    {
-        coords = new List<Vector3>();
-        tmpVectors = new List<Vector3>();
-        cubes = new List<Cube>();
-        Cell = c;
+    public int OwnerID { 
+        get => ownerID;
+        set
+        {
+            ownerID = value;
+            if (EventHandler.instance.Players.ContainsKey(ownerID))
+            {
+                owner = EventHandler.instance.Players[ownerID];
+                ownerIsPlayer = owner is ControllerPlayer;
+            }
+
+            foreach (Cube c in cubes)
+                c.OwnerID = ownerID;
+        }
     }
 
-    public Shape(Cell c, ShapeType t)
-    {
-        coords = new List<Vector3>();
-        tmpVectors = new List<Vector3>();
-        cubes = new List<Cube>();
-        Cell = c;
-        Type = t;
-    }
+    public Controller Owner { get => owner; }
 
     public Shape(Cell c, ShapeType t, Color col)
     {
@@ -89,7 +96,6 @@ public class Shape
         Type = t;
         Color = col;
     }
-    #endregion
 
     public static void InitializeShapeDictionnary()
     {
@@ -165,20 +171,23 @@ public class Shape
 
     public void RotateTemporarily(int rotation)
     {
-        Controller.instance.GenerateShadowShape(this);
-        Rotate(rotation);
-        if(Controller.instance.ShadowShape != null && Controller.instance.ShadowShape.shadowOf == this)
-            Controller.instance.validateButton.interactable = IsValid();
+        if (ownerIsPlayer)
+        {
+            ControllerPlayer.instance.GenerateShadowShape(this);
+            Rotate(rotation);
+            if (ControllerPlayer.instance.ShadowShape != null && ControllerPlayer.instance.ShadowShape.shadowOf == this)
+                ControllerPlayer.instance.validateButton.interactable = previewShape ? IsValidForCreation() : IsValid();
+        }
     }
 
     public void Move(Vector2 pos)
     {
-        Move(Controller.instance.GetCell(pos.x, pos.y));
+        Move(owner.GetCell(pos.x, pos.y));
     }
 
     public void Move(Vector3 pos)
     {
-        Move(Controller.instance.GetCell(pos.x, pos.z));
+        Move(owner.GetCell(pos.x, pos.z));
     }
 
     public void Move(Cell c)
@@ -190,57 +199,66 @@ public class Shape
 
     public void MoveTemporarily(Vector2 pos)
     {
-        tmpCell = Controller.instance.GetCell(pos.x, pos.y);
-        //check moving range
-        if (!previewShape && tmpCell)
-            if (Controller.instance.ShadowShape != null && Controller.instance.ShadowShape.shadowOf == this
-                && !Controller.instance.ShadowShape.previewShape)
-                if (Math.Abs(tmpCell.pos.x - Controller.instance.ShadowShape.cell.pos.x)
-                    + Math.Abs(tmpCell.pos.z - Controller.instance.ShadowShape.cell.pos.z) > Controller.instance.MovingRange)
-                    return;
+        if (ownerIsPlayer)
+        {
+            tmpCell = ControllerPlayer.instance.GetCell(pos.x, pos.y);
+            //check moving range
+            if (!previewShape && tmpCell)
+                if (ControllerPlayer.instance.ShadowShape != null && ControllerPlayer.instance.ShadowShape.shadowOf == this
+                    && !ControllerPlayer.instance.ShadowShape.previewShape)
+                    if (Math.Abs(tmpCell.pos.x - ControllerPlayer.instance.ShadowShape.cell.pos.x)
+                        + Math.Abs(tmpCell.pos.z - ControllerPlayer.instance.ShadowShape.cell.pos.z) > ControllerPlayer.instance.MovingRange)
+                        return;
 
-        if (tmpCell)
-            Controller.instance.GenerateShadowShape(this);
-        Move(tmpCell);
-        if (Controller.instance.ShadowShape != null && Controller.instance.ShadowShape.shadowOf == this)
-            Controller.instance.validateButton.interactable = IsValid();
+            if (tmpCell)
+                ControllerPlayer.instance.GenerateShadowShape(this);
+            Move(tmpCell);
+            if (ControllerPlayer.instance.ShadowShape != null && ControllerPlayer.instance.ShadowShape.shadowOf == this)
+                ControllerPlayer.instance.validateButton.interactable = previewShape ? IsValidForCreation() : IsValid();
+        }
     }
 
     public void MoveTemporarily(Vector3 pos)
     {
-        tmpCell = Controller.instance.GetCell(pos.x, pos.z);
-        //check moving range
-        if (!previewShape && tmpCell)
-            if (Controller.instance.ShadowShape != null && Controller.instance.ShadowShape.shadowOf == this
-                && !Controller.instance.ShadowShape.previewShape)
-                if (Math.Abs(tmpCell.pos.x - Controller.instance.ShadowShape.cell.pos.x)
-                    + Math.Abs(tmpCell.pos.z - Controller.instance.ShadowShape.cell.pos.z) > Controller.instance.MovingRange)
-                    return;
+        if (ownerIsPlayer)
+        {
+            tmpCell = ControllerPlayer.instance.GetCell(pos.x, pos.z);
+            //check moving range
+            if (!previewShape && tmpCell)
+                if (ControllerPlayer.instance.ShadowShape != null && ControllerPlayer.instance.ShadowShape.shadowOf == this
+                    && !ControllerPlayer.instance.ShadowShape.previewShape)
+                    if (Math.Abs(tmpCell.pos.x - ControllerPlayer.instance.ShadowShape.cell.pos.x)
+                        + Math.Abs(tmpCell.pos.z - ControllerPlayer.instance.ShadowShape.cell.pos.z) > ControllerPlayer.instance.MovingRange)
+                        return;
 
-        if (tmpCell)
-            Controller.instance.GenerateShadowShape(this);
-        Move(tmpCell);
-        if (Controller.instance.ShadowShape != null && Controller.instance.ShadowShape.shadowOf == this)
-            Controller.instance.validateButton.interactable = IsValid();
+            if (tmpCell)
+                ControllerPlayer.instance.GenerateShadowShape(this);
+            Move(tmpCell);
+            if (ControllerPlayer.instance.ShadowShape != null && ControllerPlayer.instance.ShadowShape.shadowOf == this)
+                ControllerPlayer.instance.validateButton.interactable = previewShape ? IsValidForCreation() : IsValid();
+        }
     }
 
     public void MoveTemporarily(Cell c)
     {
-        //check moving range
-        if (!previewShape && c)
-            if (Controller.instance.ShadowShape != null && Controller.instance.ShadowShape.shadowOf == this
-                && !Controller.instance.ShadowShape.previewShape)
-                if (Math.Abs(c.pos.x - Controller.instance.ShadowShape.cell.pos.x)
-                    + Math.Abs(c.pos.z - Controller.instance.ShadowShape.cell.pos.z) > Controller.instance.MovingRange)
-                    return;
+        if (ownerIsPlayer)
+        {
+            //check moving range
+            if (!previewShape && c)
+                if (ControllerPlayer.instance.ShadowShape != null && ControllerPlayer.instance.ShadowShape.shadowOf == this
+                    && !ControllerPlayer.instance.ShadowShape.previewShape)
+                    if (Math.Abs(c.pos.x - ControllerPlayer.instance.ShadowShape.cell.pos.x)
+                        + Math.Abs(c.pos.z - ControllerPlayer.instance.ShadowShape.cell.pos.z) > ControllerPlayer.instance.MovingRange)
+                        return;
 
-        if (c)
-            Controller.instance.GenerateShadowShape(this);
-        if (previewShape)
-            RemoveUILayer();
-        Move(c);
-        if (Controller.instance.ShadowShape != null && Controller.instance.ShadowShape.shadowOf == this)
-            Controller.instance.validateButton.interactable = IsValid();
+            if (c)
+                ControllerPlayer.instance.GenerateShadowShape(this);
+            if (previewShape)
+                RemoveUILayer();
+            Move(c);
+            if (ControllerPlayer.instance.ShadowShape != null && ControllerPlayer.instance.ShadowShape.shadowOf == this)
+                ControllerPlayer.instance.validateButton.interactable = previewShape ? IsValidForCreation() : IsValid();
+        }
     }
 
     public void RefreshCubesPos()
@@ -250,8 +268,21 @@ public class Shape
             cubes[i].coords = coords[i];
             if (cubes[i].cell)
             {
-                if (cubes[i].cell.cube == cubes[i])
-                    cubes[i].cell.free = true;
+                // remove the cube from cell data
+                if (!cubes[i].cell.overlappingCubes.Remove(cubes[i]) && cubes[i].cell.cube == cubes[i])
+                {
+                    if(cubes[i].cell.overlappingCubes.Count > 0)
+                    {
+                        cubes[i].cell.cube = cubes[i].cell.overlappingCubes[0];
+                        cubes[i].cell.overlappingCubes.Remove(cubes[i].cell.cube);
+                    }
+                    else
+                    {
+                        cubes[i].cell.cube = null;
+                        cubes[i].cell.free = true;
+                    }
+                }
+
                 cubes[i].cell = null;
             }
             if (previewShape)
@@ -259,17 +290,20 @@ public class Shape
             else
                 cubes[i].transform.localPosition = (cell.pos + coords[i]
                     + Vector3.right * 0.5f
-                    + Vector3.forward * 0.5f * ((Controller.instance.GetMapSize().y + 1) % 2))
+                    + Vector3.forward * 0.5f * ((owner.GetMapSize().y + 1) % 2))
                     * Cube.cubeScale * 1.1f;
-            tmpCell = Controller.instance.GetCell(cell.pos + coords[i]);
+            tmpCell = owner.GetCell(cell.pos + coords[i]);
             if (tmpCell)
             {
                 cubes[i].cell = tmpCell;
-                if (Controller.instance.ShadowShape != null && Controller.instance.ShadowShape.shadowOf == this)
+                if (ownerIsPlayer && ControllerPlayer.instance.ShadowShape != null && ControllerPlayer.instance.ShadowShape.shadowOf == this)
                     tmpCell.unvalidatedCube = cubes[i];
                 else
                 {
-                    tmpCell.cube = cubes[i];
+                    if (!tmpCell.cube)
+                        tmpCell.cube = cubes[i];
+                    else if (tmpCell.cube && tmpCell.cube.OwnerID != ownerID)
+                        tmpCell.overlappingCubes.Add(cubes[i]);
                     tmpCell.free = false;
                 }
             }
@@ -281,8 +315,19 @@ public class Shape
         foreach(Cube c in cubes)
         {
             if (!c.cell ||
-                (!c.cell.free && c.cell.cube.shape != this && c.cell.cube.shape.shadowOf != this) ||
-                (c.cell.OwnerID != 0 && c.cell.OwnerID != Controller.instance.playerID))
+                (!c.cell.free && c.cell.cube.shape != this && c.cell.cube.shape.shadowOf != this && c.cell.cube.shape.ownerID == ownerID))
+                return false;
+        }
+        return true;
+    }
+
+    public bool IsValidForCreation()
+    {
+        foreach(Cube c in cubes)
+        {
+            if (!c.cell ||
+                (!c.cell.free && c.cell.cube.shape != this && c.cell.cube.shape.shadowOf != this && c.cell.cube.shape.ownerID == ownerID) ||
+                (c.cell.OwnerID != 0 && c.cell.OwnerID != ownerID))
                 return false;
         }
         return true;
@@ -294,7 +339,7 @@ public class Shape
     {
         if(shadowOf == null)
         {
-            Controller.instance.UnselectShapes();
+            owner.UnselectShapes();
             foreach (Cube c in cubes)
                 c.SetSelected();
         }

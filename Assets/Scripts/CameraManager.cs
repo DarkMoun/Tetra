@@ -19,9 +19,9 @@ public class CameraManager : MonoBehaviour
     {
         SetCameraHeight();
 
-        cellTarget = Controller.instance.GetCell(0, 0);
+        cellTarget = ControllerPlayer.instance.GetCell(0, 0);
         if (!cellTarget)
-            cellTarget = Controller.instance.GetAnyCell();
+            cellTarget = ControllerPlayer.instance.GetAnyCell();
         if ((!cellTarget))
             posTarget = Vector3.zero;
         SetCameraTarget(cellTarget);
@@ -31,7 +31,7 @@ public class CameraManager : MonoBehaviour
     {
         float w = Camera.main.pixelWidth;
         float h = Camera.main.pixelHeight;
-        Vector2 size = Controller.instance.GetMapSize();
+        Vector2 size = ControllerPlayer.instance.GetMapSize();
 
         if (size.x / w > size.y / h)
             //adjust to x

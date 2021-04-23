@@ -10,6 +10,8 @@ public class Cell : MonoBehaviour
     public Cube cube = null;
     [HideInInspector]
     public Cube unvalidatedCube = null;
+    [HideInInspector]
+    public List<Cube> overlappingCubes;
 
     private int ownerID = 0;
     private bool isTarget = false;
@@ -25,10 +27,13 @@ public class Cell : MonoBehaviour
             ownerID = value;
             if(!isNeutral && ownerID < 3)
             {
-                // change cell color to owner color
-                Color c = Controller.instance.playersColors[ownerID - 1];
-                initialColor = new Color(c.r, c.g, c.b, 0.3f);
-                SetColor(initialColor);
+                if (EventHandler.instance.Players.ContainsKey(ownerID))
+                {
+                    // change cell color to owner color
+                    Color c = EventHandler.instance.Players[ownerID].color;
+                    initialColor = new Color(c.r, c.g, c.b, 0.3f);
+                    SetColor(initialColor);
+                }
             }
         } 
     }
@@ -63,16 +68,21 @@ public class Cell : MonoBehaviour
 
     private void OnMouseEnter()
     {
-        Controller.instance.mouseOverCell = this;
-        Controller.instance.mouseOverCube = null;
+        ControllerPlayer.instance.mouseOverCell = this;
+        ControllerPlayer.instance.mouseOverCube = null;
         SetColor(Color.yellow);
     }
 
     private void OnMouseExit()
     {
         SetColor(initialColor);
-        if (Controller.instance.mouseOverCell == this)
-            Controller.instance.mouseOverCell = null;
+        if (ControllerPlayer.instance.mouseOverCell == this)
+            ControllerPlayer.instance.mouseOverCell = null;
+    }
+
+    private void Awake()
+    {
+        overlappingCubes = new List<Cube>();
     }
 
     // Start is called before the first frame update

@@ -2,76 +2,44 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
-public class Controller : MonoBehaviour
+public abstract class Controller : MonoBehaviour
 {
-    public static Controller instance;
-
-    [SerializeField]
-    private Map map = null;
     public GameObject cubePrefab;
-    public Button validateButton;
 
-    private List<Cube> unusedPool;
-    private List<Cube> usedPool;
+    protected List<Cube> unusedPool;
+    protected List<Cube> usedPool;
 
-    private List<Shape> shapes;
-    private List<Color> shapeColors;
-    private Shape selectedShape = null;
-    private Shape shadowShape = null;
-
-    [HideInInspector]
-    public Cell mouseOverCell;
-    private Cell mouseDownCell = null;
-
-    [HideInInspector]
-    public Cube mouseOverCube;
-    private Cube mouseDownCube = null;
-    private Cube draggedCube = null;
+    protected List<Shape> shapes;
+    protected List<Color> shapeColors;
+    protected Shape selectedShape = null;
 
     [SerializeField]
-    private Cell previewCell = null;
-    private Shape previewShape = null;
+    protected Cell previewCell = null;
+    public Shape previewShape = null;
 
-    public int playerID = 1;
+    public int id;
+    public Color color;
 
     [SerializeField]
-    private int movingRange = 1;
+    protected int movingRange = 1;
 
-    public List<Color> playersColors;
-
-    private Cube tmpCube;
-    private Shape tmpShape;
-    private Cell tmpCell;
-    private System.Random random;
-
-    public Shape ShadowShape { get => shadowShape; }
+    protected Cube tmpCube;
+    protected Shape tmpShape;
+    protected Cell tmpCell;
+    protected System.Random random;
     public int MovingRange { get => movingRange; }
-
-    private void Awake()
-    {
-        if (Application.isPlaying)
-        {
-            if (!instance)
-                instance = this;
-            else
-                enabled = false;
-
-            if (playersColors == null)
-            {
-                playersColors = new List<Color>();
-                playersColors.Add(Color.blue);
-                playersColors.Add(Color.red);
-            }
-        }
-    }
+    public List<Shape> Shapes { get => shapes; }
+    public Cell PreviewCell { get => previewCell; }
 
     // Start is called before the first frame update
-    void Start()
+    protected void Start()
     {
-        Cube.cubeScale = map.cellScale * 10;
+        if(!EventHandler.instance.Players.ContainsKey(id))
+            EventHandler.instance.Players.Add(id, this);
+
+        Cube.cubeScale = Map.instance.cellScale * 10;
         InitializePool();
         Shape.InitializeShapeDictionnary();
         shapes = new List<Shape>();
@@ -83,9 +51,9 @@ public class Controller : MonoBehaviour
         shapeColors.Add(Color.green);
         shapeColors.Add(Color.yellow);
 
-        if (previewCell && map)
+        if (previewCell && Map.instance)
         {
-            previewCell.transform.localScale = Vector3.one * map.cellScale;
+            previewCell.transform.localScale = Vector3.one * Map.instance.cellScale;
             previewCell.pos = previewCell.transform.localPosition;
         }
     }
@@ -95,9 +63,9 @@ public class Controller : MonoBehaviour
         unusedPool = new List<Cube>();
         usedPool = new List<Cube>();
 
-        if (map && cubePrefab)
+        if (Map.instance && cubePrefab)
         {
-            int l = (int)(map.size.x * map.size.y + 20);
+            int l = (int)(Map.instance.size.x * Map.instance.size.y + 10);
             for (int i = 0; i < l; i++)
             {
                 tmpCube = GameObject.Instantiate(cubePrefab).GetComponent<Cube>();
@@ -109,7 +77,7 @@ public class Controller : MonoBehaviour
         }
         else
         {
-            if (!map)
+            if (!Map.instance)
                 Debug.LogError("Map unassigned");
             if (!cubePrefab)
                 Debug.LogError("Element prefab missing");
@@ -119,100 +87,13 @@ public class Controller : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        #region Shape Creation/Selection
-        if(previewShape == null)
-        {
-            previewShape = GenerateRandomShape(previewCell);
-            previewShape.Move(previewCell);
-        }
-        if (Input.GetMouseButtonDown(0))
-        {
-            if (mouseOverCell)
-                mouseDownCell = mouseOverCell;
-            else if (mouseOverCube)
-                mouseDownCube = mouseOverCube;
-        }
-        if (Input.GetMouseButtonUp(0))
-        {
-            if (mouseOverCell && mouseOverCell == mouseDownCell)
-            {
-                mouseDownCell = null;
-                //action for a click on mouseOverCell
-                if (mouseOverCell.free && (mouseOverCell.OwnerID == playerID || mouseOverCell.OwnerID == 0))
-                {
-                    selectedShape = previewShape;
-                    selectedShape.MoveTemporarily(mouseOverCell);
-                    selectedShape.Select();
-                    selectedShape.previewShape = false;
-                }
-                else if (!mouseOverCell.free)
-                {
-                    selectedShape = mouseOverCell.cube.shape;
-                    mouseOverCell.cube.shape.Select();
-                }
-            }
-            else if (mouseOverCube && mouseOverCube == mouseDownCube && mouseOverCube.shape != shadowShape)
-            {
-                mouseDownCube = null;
-                //action for a click on mouseOverCube
-                selectedShape = mouseOverCube.shape;
-                mouseOverCube.shape.Select();
 
-            }
-        }
-        #endregion
-
-        #region Drag&Drop
-        if (Input.GetMouseButtonDown(0))
-            if (mouseOverCube)
-                draggedCube = mouseOverCube;
-        if (Input.GetMouseButton(0) && draggedCube)
-        {
-            tmpCell = mouseOverCube ? mouseOverCube.cell : mouseOverCell ? mouseOverCell : null;
-            if (tmpCell)
-            {
-                tmpCell = GetCell(tmpCell.pos - draggedCube.coords);
-                if (tmpCell && tmpCell != draggedCube.shape.Cell)
-                    draggedCube.shape.MoveTemporarily(tmpCell);
-            }
-        }
-        else if (Input.GetMouseButtonUp(0))
-            draggedCube = null;
-        #endregion
-
-        if (selectedShape != null)
-        {
-            if (Input.GetKeyDown(KeyCode.Z))
-            {
-                selectedShape.MoveTemporarily(selectedShape.Cell.pos + Vector3.forward);
-            }
-            else if (Input.GetKeyDown(KeyCode.Q))
-            {
-                selectedShape.MoveTemporarily(selectedShape.Cell.pos + Vector3.left);
-            }
-            else if (Input.GetKeyDown(KeyCode.S))
-            {
-                selectedShape.MoveTemporarily(selectedShape.Cell.pos + Vector3.back);
-            }
-            else if (Input.GetKeyDown(KeyCode.D))
-            {
-                selectedShape.MoveTemporarily(selectedShape.Cell.pos + Vector3.right);
-            }
-            else if (Input.GetKeyDown(KeyCode.E))
-            {
-                selectedShape.RotateTemporarily(1);
-            }
-            else if (Input.GetKeyDown(KeyCode.A))
-            {
-                selectedShape.RotateTemporarily(3);
-            }
-        }
     }
 
     public Cell GetCell(int i, int j)
     {
-        if (map)
-            return map.GetCell(i, j);
+        if (Map.instance)
+            return Map.instance.GetCell(i, j);
         return null;
     }
 
@@ -228,15 +109,15 @@ public class Controller : MonoBehaviour
 
     public Cell GetAnyCell()
     {
-        if (map)
-            return map.GetAnyCell();
+        if (Map.instance)
+            return Map.instance.GetAnyCell();
         return null;
     }
 
     public Vector2 GetMapSize()
     {
-        if (map)
-            return map.size;
+        if (Map.instance)
+            return Map.instance.size;
         else
             return Vector2.one * -1;
     }
@@ -249,43 +130,20 @@ public class Controller : MonoBehaviour
     /// <param name="cell"></param>
     /// <param name="color"></param>
     /// <param name="rotation">The rotation value is an int between 0 and 3 and is then multiplied by 90</param>
-    private Shape GenerateShape(ShapeType type, Cell cell, Color color, int rotation = 0)
+    protected Shape GenerateShape(ShapeType type, Cell cell, Color color, int rotation = 0)
     {
         tmpShape = new Shape(cell, type, color);
+        tmpShape.OwnerID = id;
         tmpShape.Rotate(rotation);
         shapes.Add(tmpShape);
         return tmpShape;
     }
 
-    private Shape GenerateRandomShape(Cell cell)
+    public Shape GenerateRandomShape(Cell cell)
     {
         Color randomColor = shapeColors[random.Next(shapeColors.Count)];
         ShapeType randomType = (ShapeType)Shape.shapeTypeValues.GetValue(random.Next(Shape.shapeTypeValues.Length));
         return GenerateShape(randomType, cell, randomColor, random.Next(4));
-    }
-
-    public Shape GenerateShadowShape(Shape shape)
-    {
-        if(shape != null && (shadowShape == null || shape != shadowShape.shadowOf))
-        {
-            if (shadowShape != null)
-                DeleteShape(shadowShape.shadowOf);
-
-            Color c = shape.Color;
-            shadowShape = GenerateShape(shape.Type, shape.Cell, new Color(c.r, c.g, c.b, 0.6f));
-            shadowShape.previewShape = false;
-            shadowShape.previewShape = shape.previewShape;
-            if (shadowShape.previewShape)
-                previewShape = shadowShape;
-            else
-                shadowShape.RemoveUILayer();
-            shadowShape.coords.Clear();
-            shadowShape.coords.AddRange(shape.coords);
-            shadowShape.RefreshCubesPos();
-            shadowShape.shadowOf = shape;
-            return shadowShape;
-        }
-        return null;
     }
 
     public void UnselectShapes()
@@ -294,7 +152,7 @@ public class Controller : MonoBehaviour
             s.Unselect();
     }
 
-    public void DeleteShape(Shape shape)
+    public virtual void DeleteShape(Shape shape)
     {
         if(shape != null)
         {
@@ -315,35 +173,16 @@ public class Controller : MonoBehaviour
                         cube.cell.unvalidatedCube = null;
                     else
                     {
-                        cube.cell.cube = null;
+                        if (!cube.cell.overlappingCubes.Remove(cube))
+                            cube.cell.cube = null;
                         cube.cell.free = true;
                     }
                     cube.cell = null;
                 }
                 cube.shape = null;
             }
-
-            //if the shape has a shadow, set the shadow back to normal
-            if(shadowShape != null && shadowShape.shadowOf == shape)
-            {
-                shadowShape.shadowOf = null;
-                Color c = shadowShape.Color;
-                shadowShape.Color = new Color(c.r, c.g, c.b, 1f);
-                shadowShape = null;
-            }
-            shapes.Remove(shape);
         }
-    }
-
-    public void ReverseToShadow()
-    {
-        if (shadowShape != null)
-        {
-            tmpShape = shadowShape;
-            DeleteShape(shadowShape.shadowOf);
-            selectedShape = tmpShape;
-            selectedShape.Select();
-        }
+        shapes.Remove(shape);
     }
 
     public void AllocateCubes(Shape shape)
@@ -380,25 +219,4 @@ public class Controller : MonoBehaviour
         }
     }
     #endregion
-
-    public void ValidateAction()
-    {
-        if(shadowShape != null)
-        {
-            foreach(Cube cube in shadowShape.shadowOf.cubes)
-                if (cube.cell)
-                {
-                    cube.cell.cube = cube;
-                    cube.cell.unvalidatedCube = null;
-                    cube.cell.free = false;
-                }
-            if (shadowShape.previewShape)
-            {
-                shadowShape.previewShape = false;
-                previewShape = null;
-            }
-            DeleteShape(shadowShape);
-            shadowShape = null;
-        }
-    }
 }

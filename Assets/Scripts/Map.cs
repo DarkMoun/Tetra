@@ -7,27 +7,37 @@ using UnityEngine;
 
 public class Map : MonoBehaviour
 {
+    public static Map instance;
+
     public GameObject cellPrefab;
     public float cellScale = 0.1f;
 
     public Vector2 size = new Vector2(5, 12);
     private Dictionary<int, Dictionary<int, Cell>> grid;
+    private List<Cell> cells;
 
-    public string mapPath;
     private string[][] loadedMap;
 
     private static string neutralCellCharacter = "n";
 
-    private Cell tmpCell;
     private List<string> tmpStringList1;
-    private List<string> tmpStringList2;
 
-    public string mapID = "0";
+    public string mapID = "map0";
+
+    public List<Cell> Cells { get => cells; }
+
+    private void Awake()
+    {
+        if (!instance)
+            instance = this;
+    }
 
     // Start is called before the first frame update
     void Start()
     {
-        LoadMap("maps/map" + mapID + ".txt");
+        cells = new List<Cell>();
+
+        LoadMap("maps/" + mapID + ".txt");
     }
 
     private void InitializeGrid(string[][] map)
@@ -85,6 +95,8 @@ public class Map : MonoBehaviour
                         grid[i][j].OwnerID = loadedNumber < 0 ? -loadedNumber : loadedNumber;
                         grid[i][j].IsTarget = loadedNumber < 0;
                     }
+
+                    cells.Add(grid[i][j]);
                 }
             }
         }

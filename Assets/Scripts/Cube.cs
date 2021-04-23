@@ -13,8 +13,12 @@ public class Cube : MonoBehaviour
     private new Renderer renderer;
     private Color initialColor;
 
+    private int ownerID = 0;
+
     [SerializeField]
     private SelectedBorder border = null;
+
+    public int OwnerID { get => ownerID; set => ownerID = value; }
 
     // Start is called before the first frame update
     void Start()
@@ -32,8 +36,8 @@ public class Cube : MonoBehaviour
 
     private void OnMouseEnter()
     {
-        Controller.instance.mouseOverCube = this;
-        Controller.instance.mouseOverCell = null;
+        ControllerPlayer.instance.mouseOverCube = this;
+        ControllerPlayer.instance.mouseOverCell = null;
         if (renderer && shape.shadowOf == null)
         {
             if (border.renderers.Count > 0)
@@ -47,8 +51,8 @@ public class Cube : MonoBehaviour
     {
         if (renderer && shape.shadowOf == null)
             renderer.material.color = initialColor;
-        if (Controller.instance.mouseOverCube == this)
-            Controller.instance.mouseOverCube = null;
+        if (ControllerPlayer.instance.mouseOverCube == this)
+            ControllerPlayer.instance.mouseOverCube = null;
     }
 
     public void ChangeBorderColor(Color c)
